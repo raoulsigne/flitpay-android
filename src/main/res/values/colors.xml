@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="myblue">#0070C0</color>
+    <color name="separator">#D3D3D3</color>
+    <color name="maincolor">#86B843</color>
+    <color name="connexion_background">#f9f9f9</color>
+    <color name="white">#FFF</color>
+    <color name="black">#000</color>
+</resources>

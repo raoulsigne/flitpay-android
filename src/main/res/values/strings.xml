@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">FlitPay Android</string>
+    <string name="pays">Pays du client</string>
+    <string name="operateur">Opérateur téléphonique</string>
+    <string name="numero">votre numéro</string>
+    <string name="email">votre email</string>
+    <string name="validation">FlitPay</string>
+    <string name="reference">Transaction ID</string>
+    <string name="validate_button">Valider</string>
+</resources>
