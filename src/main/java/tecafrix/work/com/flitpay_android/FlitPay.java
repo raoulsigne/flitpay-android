@@ -58,6 +58,7 @@ public class FlitPay {
 
     public void setPublicKey(String key) {
         publicKey = key;
+        this.initialise = true;
     }
 
     public String getPublicKey() {
@@ -218,67 +219,79 @@ public class FlitPay {
      */
     public void generate_token(String phone_number, String email, int phone_code, int phone_operator_id,
                                   int amount, final apiListener listener){
-        try {
-            url = new URL(BASE_API + GENERATE_TOKEN_API);
-            client = (HttpURLConnection) url.openConnection();
-            client.setRequestMethod("POST");
-            client.setDoOutput(true);
-
-            OutputStream outputPost = new BufferedOutputStream(client.getOutputStream());
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputPost, "UTF-8"));
-
-            ContentValues values = new ContentValues();
-            values.put("phone_number", phone_number);
-            values.put("email", email);
-            values.put("phone_code", phone_code);
-            values.put("phone_operator_id", phone_operator_id);
-            values.put("amount", amount);
-            values.put("public_key", this.getPublicKey());
-
-            writer.write(getQuery(values));
-            writer.flush();
-            writer.close();
-            outputPost.close();
-            Log.i(TAG, url.toString());
-
-            StringBuilder builder = new StringBuilder();
-            BufferedReader br = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                builder.append(line + "\n");
-            }
-            br.close();
-            Log.i(TAG, "reponse = " + builder.toString());
-
+        if (this.initialise) {
             try {
-                JSONObject json = new JSONObject(builder.toString());
-                boolean statut = Boolean.valueOf(json.getBoolean("err"));
-                if (!statut) {
-                    JSONObject json2 = json.getJSONObject("data");
-                    Token token = new Token(json2.getString("phone_number"), json2.getString("token"), json2.getInt("amount"));
-                    listener.onSuccess(token);
-                } else {
-                    listener.onError(json);
+                url = new URL(BASE_API + GENERATE_TOKEN_API);
+                client = (HttpURLConnection) url.openConnection();
+                client.setRequestMethod("POST");
+                client.setDoOutput(true);
+
+                OutputStream outputPost = new BufferedOutputStream(client.getOutputStream());
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputPost, "UTF-8"));
+
+                ContentValues values = new ContentValues();
+                values.put("phone_number", phone_number);
+                values.put("email", email);
+                values.put("phone_code", phone_code);
+                values.put("phone_operator_id", phone_operator_id);
+                values.put("amount", amount);
+                values.put("public_key", this.getPublicKey());
+
+                writer.write(getQuery(values));
+                writer.flush();
+                writer.close();
+                outputPost.close();
+                Log.i(TAG, url.toString());
+
+                StringBuilder builder = new StringBuilder();
+                BufferedReader br = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    builder.append(line + "\n");
                 }
+                br.close();
+                Log.i(TAG, "reponse = " + builder.toString());
+
+                try {
+                    JSONObject json = new JSONObject(builder.toString());
+                    boolean statut = Boolean.valueOf(json.getBoolean("err"));
+                    if (!statut) {
+                        JSONObject json2 = json.getJSONObject("data");
+                        Token token = new Token(json2.getString("phone_number"), json2.getString("token"), json2.getInt("amount"));
+                        listener.onSuccess(token);
+                    } else {
+                        listener.onError(json);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    listener.onError(null);
+                }
+
+            } catch (MalformedURLException error) {
+                //Handles an incorrectly entered URL
+                Log.e(TAG, "MalformedURLException " + error.getMessage());
+                listener.onError(null);
+            } catch (SocketTimeoutException error) {
+                //Handles URL access timeout.
+                Log.e(TAG, "SocketTimeoutException " + error.getMessage());
+                listener.onError(null);
+            } catch (IOException error) {
+                //Handles flitpay_input and output errors
+                Log.e(TAG, "IOException " + error.toString());
+                listener.onError(null);
+            } finally {
+                client.disconnect();
+            }
+        }else {
+            try{
+                JSONObject json = new JSONObject();
+                json.put("statut", "false");
+                json.put("message", "SDK has not been initialised");
+                listener.onError(json);
             } catch (JSONException e) {
                 e.printStackTrace();
                 listener.onError(null);
             }
-
-        } catch (MalformedURLException error) {
-            //Handles an incorrectly entered URL
-            Log.e(TAG, "MalformedURLException " + error.getMessage());
-            listener.onError(null);
-        } catch (SocketTimeoutException error) {
-            //Handles URL access timeout.
-            Log.e(TAG, "SocketTimeoutException " + error.getMessage());
-            listener.onError(null);
-        } catch (IOException error) {
-            //Handles flitpay_input and output errors
-            Log.e(TAG, "IOException " + error.toString());
-            listener.onError(null);
-        } finally {
-            client.disconnect();
         }
     }
 
@@ -290,50 +303,62 @@ public class FlitPay {
      * @param listener
      */
     public void initiate_paiement(String token, int amount, String phone_number, final apiListener listener){
-        try {
-            url = new URL(INITIATE_PAIEMENT_API + "public_key=" + this.getPublicKey() +
-                    "&token=" + token + "&amount=" + amount + "&phone_number=" + phone_number);
-            Log.i("url", url.toString());
-            client = (HttpURLConnection) url.openConnection();
-            client.setRequestMethod("GET");
-
-            StringBuilder builder = new StringBuilder();
-            BufferedReader br = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                builder.append(line + "\n");
-            }
-            br.close();
-            Log.i(TAG, "reponse = " + builder.toString());
-
+        if (this.initialise) {
             try {
-                JSONObject json = new JSONObject(builder.toString());
-                JSONObject json2 = json.getJSONObject("body");
-                boolean statut = Boolean.valueOf(json2.getBoolean("err"));
-                if (!statut) {
-                    listener.onResult(true);
-                } else {
-                    listener.onError(json2);
+                url = new URL(INITIATE_PAIEMENT_API + "public_key=" + this.getPublicKey() +
+                        "&token=" + token + "&amount=" + amount + "&phone_number=" + phone_number);
+                Log.i("url", url.toString());
+                client = (HttpURLConnection) url.openConnection();
+                client.setRequestMethod("GET");
+
+                StringBuilder builder = new StringBuilder();
+                BufferedReader br = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    builder.append(line + "\n");
                 }
+                br.close();
+                Log.i(TAG, "reponse = " + builder.toString());
+
+                try {
+                    JSONObject json = new JSONObject(builder.toString());
+                    JSONObject json2 = json.getJSONObject("body");
+                    boolean statut = Boolean.valueOf(json2.getBoolean("err"));
+                    if (!statut) {
+                        listener.onResult(true);
+                    } else {
+                        listener.onError(json2);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    listener.onError(null);
+                }
+
+            } catch (MalformedURLException error) {
+                //Handles an incorrectly entered URL
+                Log.e(TAG, "MalformedURLException " + error.getMessage());
+                listener.onError(null);
+            } catch (SocketTimeoutException error) {
+                //Handles URL access timeout.
+                Log.e(TAG, "SocketTimeoutException " + error.getMessage());
+                listener.onError(null);
+            } catch (IOException error) {
+                //Handles flitpay_input and output errors
+                Log.e(TAG, "IOException " + error.toString());
+                listener.onError(null);
+            } finally {
+                client.disconnect();
+            }
+        }else {
+            try{
+                JSONObject json = new JSONObject();
+                json.put("statut", "false");
+                json.put("message", "SDK has not been initialised");
+                listener.onError(json);
             } catch (JSONException e) {
                 e.printStackTrace();
                 listener.onError(null);
             }
-
-        } catch (MalformedURLException error) {
-            //Handles an incorrectly entered URL
-            Log.e(TAG, "MalformedURLException " + error.getMessage());
-            listener.onError(null);
-        } catch (SocketTimeoutException error) {
-            //Handles URL access timeout.
-            Log.e(TAG, "SocketTimeoutException " + error.getMessage());
-            listener.onError(null);
-        } catch (IOException error) {
-            //Handles flitpay_input and output errors
-            Log.e(TAG, "IOException " + error.toString());
-            listener.onError(null);
-        } finally {
-            client.disconnect();
         }
     }
 
